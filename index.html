@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Endless Typer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 90%;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .title {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 30px;
+            background: linear-gradient(45deg, #64b5f6, #42a5f5, #2196f3);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(100, 181, 246, 0.3);
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-box {
+            background: rgba(26, 26, 46, 0.7);
+            border: 1px solid rgba(100, 181, 246, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .stat-box:hover {
+            border-color: rgba(100, 181, 246, 0.6);
+            box-shadow: 0 5px 20px rgba(100, 181, 246, 0.2);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #90caf9;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .typing-area {
+            background: rgba(22, 33, 62, 0.8);
+            border-radius: 15px;
+            padding: 40px;
+            margin-bottom: 30px;
+            border: 2px solid rgba(100, 181, 246, 0.2);
+            backdrop-filter: blur(15px);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .text-display {
+            font-size: 2rem;
+            line-height: 2.5;
+            letter-spacing: 3px;
+            margin-bottom: 20px;
+            min-height: 80px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .romaji-display {
+            font-size: 1.2rem;
+            line-height: 2;
+            letter-spacing: 2px;
+            margin-bottom: 30px;
+            min-height: 60px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 2px;
+            color: #90caf9;
+            font-family: 'Monaco', monospace;
+        }
+
+        .char {
+            transition: all 0.3s ease;
+            border-radius: 4px;
+            padding: 2px 6px;
+            position: relative;
+        }
+
+        .char.correct {
+            background: rgba(76, 175, 80, 0.3);
+            color: #4caf50;
+        }
+
+        .char.incorrect {
+            background: rgba(244, 67, 54, 0.3);
+            color: #f44336;
+        }
+
+        .char.current {
+            background: rgba(100, 181, 246, 0.4);
+            animation: pulse 1s infinite;
+        }
+
+        .char.upcoming {
+            opacity: 0;
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .char.visible {
+            opacity: 0.8;
+            color: #ffffff;
+        }
+
+        .romaji-char {
+            transition: all 0.3s ease;
+            border-radius: 3px;
+            padding: 1px 3px;
+        }
+
+        .romaji-char.correct {
+            background: rgba(76, 175, 80, 0.3);
+            color: #4caf50;
+        }
+
+        .romaji-char.current {
+            background: rgba(100, 181, 246, 0.4);
+            animation: pulse 1s infinite;
+        }
+
+        .romaji-char.visible {
+            opacity: 0.6;
+            color: #90caf9;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 0.8;
+            }
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2rem;
+            background: rgba(26, 26, 46, 0.8);
+            border: 2px solid rgba(100, 181, 246, 0.3);
+            border-radius: 10px;
+            color: #ffffff;
+            outline: none;
+            text-align: center;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+            font-family: 'Monaco', monospace;
+        }
+
+        .input-field:focus {
+            border-color: rgba(100, 181, 246, 0.8);
+            box-shadow: 0 0 20px rgba(100, 181, 246, 0.3);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #1976d2, #2196f3);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .control-btn:hover {
+            background: linear-gradient(45deg, #2196f3, #42a5f5);
+            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+        }
+
+        .mode-selector {
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .mode-btn {
+            background: rgba(26, 26, 46, 0.7);
+            border: 2px solid rgba(100, 181, 246, 0.3);
+            color: #90caf9;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .mode-btn:hover {
+            border-color: rgba(100, 181, 246, 0.6);
+            background: rgba(26, 26, 46, 0.9);
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(45deg, #1976d2, #2196f3);
+            border-color: #2196f3;
+            color: white;
+            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.4);
+        }
+
+        .time-limit-display {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ff6b6b;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+        }
+
+        .time-limit-display.warning {
+            color: #ff4444;
+            animation: timeWarning 0.5s infinite alternate;
+        }
+
+        @keyframes timeWarning {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.05); }
+        }
+            .title {
+                font-size: 2rem;
+            }
+            
+            .text-display {
+                font-size: 1.5rem;
+            }
+            
+            .romaji-display {
+                font-size: 1rem;
+            }
+            
+            .typing-area {
+                padding: 20px;
+            }
+            
+            .stats-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+            <div class="container">
+        <h1 class="title">Endless Typer</h1>
+        
+        <div class="mode-selector">
+            <button class="mode-btn active" onclick="setMode('endless')">Endless</button>
+            <button class="mode-btn" onclick="setMode('easy')">Easy (20s)</button>
+            <button class="mode-btn" onclick="setMode('mid')">Mid (15s)</button>
+            <button class="mode-btn" onclick="setMode('hard')">Hard (10s)</button>
+            <button class="mode-btn" onclick="setMode('ex')">EX (7s)</button>
+        </div>
+        
+        <div class="stats-container">
+            <div class="stat-box">
+                <div class="stat-label">タイプ数</div>
+                <div class="stat-value" id="totalTypes">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">ミス数</div>
+                <div class="stat-value" id="mistakes">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">秒間打鍵数</div>
+                <div class="stat-value" id="kps">0.0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">分間打鍵数</div>
+                <div class="stat-value" id="kpm">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">経過時間</div>
+                <div class="stat-value" id="time">0s</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">スコア</div>
+                <div class="stat-value" id="score">0</div>
+            </div>
+        </div>
+
+        <div class="typing-area">
+            <div id="timeLimitDisplay" class="time-limit-display" style="display: none;"></div>
+            <div class="text-display" id="textDisplay"></div>
+            <div class="romaji-display" id="romajiDisplay"></div>
+            <input type="text" class="input-field" id="inputField" placeholder="ローマ字で入力してください..." autocomplete="off">
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="resetStats()">リセット</button>
+            <button class="control-btn" onclick="shuffleText()">シャッフル</button>
+            <button class="control-btn" onclick="updateText()">更新</button>
+        </div>
+    </div>
+
+    <script>
+        // ひらがなからローマ字への変換テーブル（複数パターン対応）
+        const hiraganaToRomaji = {
+            'あ': ['a'], 'い': ['i'], 'う': ['u'], 'え': ['e'], 'お': ['o'],
+            'か': ['ka'], 'き': ['ki'], 'く': ['ku'], 'け': ['ke'], 'こ': ['ko'],
+            'が': ['ga'], 'ぎ': ['gi'], 'ぐ': ['gu'], 'げ': ['ge'], 'ご': ['go'],
+            'さ': ['sa'], 'し': ['shi', 'si'], 'す': ['su'], 'せ': ['se'], 'そ': ['so'],
+            'ざ': ['za'], 'じ': ['ji', 'zi'], 'ず': ['zu'], 'ぜ': ['ze'], 'ぞ': ['zo'],
+            'た': ['ta'], 'ち': ['chi', 'ti'], 'つ': ['tsu', 'tu'], 'て': ['te'], 'と': ['to'],
+            'だ': ['da'], 'ぢ': ['di'], 'づ': ['du'], 'で': ['de'], 'ど': ['do'],
+            'な': ['na'], 'に': ['ni'], 'ぬ': ['nu'], 'ね': ['ne'], 'の': ['no'],
+            'は': ['ha'], 'ひ': ['hi'], 'ふ': ['fu', 'hu'], 'へ': ['he'], 'ほ': ['ho'],
+            'ば': ['ba'], 'び': ['bi'], 'ぶ': ['bu'], 'べ': ['be'], 'ぼ': ['bo'],
+            'ぱ': ['pa'], 'ぴ': ['pi'], 'ぷ': ['pu'], 'ぺ': ['pe'], 'ぽ': ['po'],
+            'ま': ['ma'], 'み': ['mi'], 'む': ['mu'], 'め': ['me'], 'も': ['mo'],
+            'や': ['ya'], 'ゆ': ['yu'], 'よ': ['yo'],
+            'ら': ['ra'], 'り': ['ri'], 'る': ['ru'], 'れ': ['re'], 'ろ': ['ro'],
+            'わ': ['wa'], 'ゐ': ['wi'], 'ゑ': ['we'], 'を': ['wo'], 'ん': ['nn', 'n'],
+            'っ': [''], // 促音は次の子音で処理
+            'ー': ['-'], ' ': [' '], '。': ['.'], '、': [','], '！': ['!'], '？': ['?'],
+            // 小文字（拗音に使用）
+            'ゃ': ['ya'], 'ゅ': ['yu'], 'ょ': ['yo'],
+            'ぁ': ['a'], 'ぃ': ['i'], 'ぅ': ['u'], 'ぇ': ['e'], 'ぉ': ['o']
+        };
+
+        // 拗音パターンの変換
+        function convertYouon(text) {
+            let result = '';
+            let i = 0;
+            
+            while (i < text.length) {
+                let char = text[i];
+                
+                // 拗音のパターンをチェック
+                if (i + 1 < text.length) {
+                    let nextChar = text[i + 1];
+                    let combo = char + nextChar;
+                    
+                    // よくある拗音パターン
+                    const youonMap = {
+                        'しゃ': ['sha', 'sya'], 'しゅ': ['shu', 'syu'], 'しょ': ['sho', 'syo'],
+                        'ちゃ': ['cha', 'tya'], 'ちゅ': ['chu', 'tyu'], 'ちょ': ['cho', 'tyo'],
+                        'じゃ': ['ja', 'jya', 'zya'], 'じゅ': ['ju', 'jyu', 'zyu'], 'じょ': ['jo', 'jyo', 'zyo'],
+                        'きゃ': ['kya'], 'きゅ': ['kyu'], 'きょ': ['kyo'],
+                        'ぎゃ': ['gya'], 'ぎゅ': ['gyu'], 'ぎょ': ['gyo'],
+                        'にゃ': ['nya'], 'にゅ': ['nyu'], 'にょ': ['nyo'],
+                        'ひゃ': ['hya'], 'ひゅ': ['hyu'], 'ひょ': ['hyo'],
+                        'びゃ': ['bya'], 'びゅ': ['byu'], 'びょ': ['byo'],
+                        'ぴゃ': ['pya'], 'ぴゅ': ['pyu'], 'ぴょ': ['pyo'],
+                        'みゃ': ['mya'], 'みゅ': ['myu'], 'みょ': ['myo'],
+                        'りゃ': ['rya'], 'りゅ': ['ryu'], 'りょ': ['ryo']
+                    };
+                    
+                    if (youonMap[combo]) {
+                        result += combo;
+                        i += 2;
+                        continue;
+                    }
+                }
+                
+                result += char;
+                i++;
+            }
+            
+            return result;
+        }
+
+        // 日本語の文章データ（大幅に増量・多様なジャンル）
+        const textData = [
+            // 自然・季節
+            { display: "花火大会の夜空に咲く大きな花", reading: "はなびたいかいのよぞらにさくおおきなはな" },
+            { display: "桜の花が春風に舞い散る美しい季節", reading: "さくらのはながはるかぜにまいちるうつくしいきせつ" },
+            { display: "山々に響く鳥のさえずりが心地よい", reading: "やまやまにひびくとりのさえずりがここちよい" },
+            { display: "夕日が海に沈む光景は息をのむほど美しい", reading: "ゆうひがうみにしずむこうけいはいきをのむほどうつくしい" },
+            { display: "古い本の香りが図書館に漂っている", reading: "ふるいほんのかおりがとしょかんにただよっている" },
+            { display: "雨上がりの空に虹が架かった", reading: "あめあがりのそらににじがかかった" },
+            { display: "コーヒーの香りが朝の空気を包む", reading: "こーひーのかおりがあさのくうきをつつむ" },
+            { display: "星空の下で静かに考え事をする", reading: "ほしぞらのしたでしずかにかんがえごとをする" },
+            { display: "新緑の季節に森を散歩するのは気持ちが良い", reading: "しんりょくのきせつにもりをさんぽするのはきもちがよい" },
+            { display: "波の音を聞きながら砂浜を歩く", reading: "なみのおとをききながらすなはまをあるく" },
+            { display: "風鈴の音が夏の暑さを和らげてくれる", reading: "ふうりんのおとがなつのあつさをやわらげてくれる" },
+            { display: "雪景色の中を歩くと足音が響く", reading: "ゆきげしきのなかをあるくとあしおとがひびく" },
+            { display: "温泉に浸かって疲れを癒す時間", reading: "おんせんにひたかってつかれをいやすじかん" },
+            { display: "秋の紅葉が山を彩る美しい景色", reading: "あきのこうようがやまをいろどるうつくしいけしき" },
+            { display: "朝露に濡れた草花が輝いている", reading: "あさつゆにぬれたくさばながかがやいている" },
+            { display: "満月の光が湖面を静かに照らす", reading: "まんげつのひかりがこめんをしずかにてらす" },
+            { display: "蝉の声が夏の終わりを告げている", reading: "せみのこえがなつのおわりをつげている" },
+            { display: "雷雲が空を暗く覆い始めた", reading: "らいうんがそらをくらくおおいはじめた" },
+
+            // 技術・科学
+            { display: "機械学習と人工知能の発達", reading: "きかいがくしゅうとじんこうちのうのはったつ" },
+            { display: "宇宙開発技術の進歩", reading: "うちゅうかいはつぎじゅつのしんぽ" },
+            { display: "地球環境保護の重要性", reading: "ちきゅうかんきょうほごのじゅうようせい" },
+            { display: "医療技術の革新と発展", reading: "いりょうぎじゅつのかくしんとはってん" },
+            { display: "情報通信技術の急速な変化", reading: "じょうほうつうしんぎじゅつのきゅうそくなへんか" },
+            { display: "持続可能な社会の実現", reading: "じぞくかのうなしゃかいのじつげん" },
+            { display: "量子コンピュータの可能性", reading: "りょうしこんぴゅーたのかのうせい" },
+            { display: "バイオテクノロジーの応用", reading: "ばいおてくのろじーのおうよう" },
+            { display: "再生可能エネルギーの普及", reading: "さいせいかのうえねるぎーのふきゅう" },
+            { display: "ロボット工学の発展", reading: "ろぼっとこうがくのはってん" },
+
+            // 日常生活・食べ物
+            { display: "手作りのパンの香ばしい香り", reading: "てづくりのぱんのこうばしいかおり" },
+            { display: "家族で囲む温かい食卓", reading: "かぞくでかこむあたたかいしょくたく" },
+            { display: "友達と過ごす楽しい時間", reading: "ともだちとすごすたのしいじかん" },
+            { display: "母の手料理が一番美味しい", reading: "ははのてりょうりがいちばんおいしい" },
+            { display: "電車の中で読む小説", reading: "でんしゃのなかでよむしょうせつ" },
+            { display: "週末の買い物は楽しい", reading: "しゅうまつのかいものはたのしい" },
+            { display: "猫がひなたぼっこをしている", reading: "ねこがひなたぼっこをしている" },
+            { display: "犬と一緒に公園を散歩", reading: "いぬといっしょにこうえんをさんぽ" },
+            { display: "お祭りの屋台で焼きそばを買う", reading: "おまつりのやたいでやきそばをかう" },
+            { display: "新しいレシピに挑戦してみる", reading: "あたらしいれしぴにちょうせんしてみる" },
+            { display: "早起きして朝のランニング", reading: "はやおきしてあさのらんにんぐ" },
+            { display: "映画館で感動的な作品を観る", reading: "えいがかんでかんどうてきなさくひんをみる" },
+
+            // 文学・芸術
+            { display: "詩人の心に響く美しい言葉", reading: "しじんのこころにひびくうつくしいことば" },
+            { display: "画家が描く色彩豊かな世界", reading: "がかがえがくしきさいゆたかなせかい" },
+            { display: "音楽家の奏でる感動的なメロディ", reading: "おんがくかのかなでるかんどうてきなめろでぃ" },
+            { display: "古典文学の深い味わい", reading: "こてんぶんがくのふかいあじわい" },
+            { display: "美術館で名画を鑑賞する", reading: "びじゅつかんでめいがをかんしょうする" },
+            { display: "オーケストラの演奏会に感動", reading: "おーけすとらのえんそうかいにかんどう" },
+            { display: "書道で心を込めて文字を書く", reading: "しょどうでこころをこめてもじをかく" },
+            { display: "演劇の舞台で役者が演じる", reading: "えんげきのぶたいでやくしゃがえんじる" },
+
+            // 歴史・文化
+            { display: "武士道の精神と日本の伝統", reading: "ぶしどうのせいしんとにほんのでんとう" },
+            { display: "江戸時代の町人文化", reading: "えどじだいのちょうにんぶんか" },
+            { display: "茶道の心と和の美学", reading: "さどうのこころとわのびがく" },
+            { display: "祭りに込められた地域の願い", reading: "まつりにこめられたちいきのねがい" },
+            { display: "神社仏閣の荘厳な雰囲気", reading: "じんじゃぶっかくのそうごんなふんいき" },
+            { display: "和服の美しさと伝統技術", reading: "わふくのうつくしさとでんとうぎじゅつ" },
+            { display: "侍の生き方と武士の誇り", reading: "さむらいのいきかたとぶしのほこり" },
+            { display: "平安時代の雅な文化", reading: "へいあんじだいのみやびなぶんか" },
+
+            // スポーツ・健康
+            { display: "マラソンでゴールを目指す", reading: "まらそんでごーるをめざす" },
+            { display: "サッカーの試合で決勝ゴール", reading: "さっかーのしあいできっしょうごーる" },
+            { display: "野球場で応援する熱い声援", reading: "やきゅうじょうでおうえんするあついせいえん" },
+            { display: "テニスコートでラリーを続ける", reading: "てにすこーとでらりーをつづける" },
+            { display: "プールで泳ぐ爽快感", reading: "ぷーるでおよぐそうかいかん" },
+            { display: "ヨガで心と体を整える", reading: "よがでこころとからだをととのえる" },
+            { display: "山登りで頂上を制覇", reading: "やまのぼりでちょうじょうをせいは" },
+            { display: "バスケットボールの華麗なシュート", reading: "ばすけっとぼーるのかれいなしゅーと" },
+
+            // 旅行・冒険
+            { display: "世界遺産を巡る感動の旅", reading: "せかいいさんをめぐるかんどうのたび" },
+            { display: "異国の文化に触れる体験", reading: "いこくのぶんかにふれるたいけん" },
+            { display: "秘境に隠された美しい景色", reading: "ひきょうにかくされたうつくしいけしき" },
+            { display: "電車で行く日帰り旅行", reading: "でんしゃでいくひがえりりょこう" },
+            { display: "温泉街の風情ある街並み", reading: "おんせんがいのふぜいあるまちなみ" },
+            { display: "海外の美味しい料理を味わう", reading: "かいがいのおいしいりょうりをあじわう" },
+            { display: "登山道で出会う野生動物", reading: "とざんどうでであうやせいどうぶつ" },
+            { display: "古い街並みを歩く散策", reading: "ふるいまちなみをあるくさんさく" },
+
+            // 学問・教育
+            { display: "数学の美しい定理と証明", reading: "すうがくのうつくしいていりとしょうめい" },
+            { display: "化学実験で新しい発見", reading: "かがくじっけんであたらしいはっけん" },
+            { display: "物理学の法則が示す宇宙の神秘", reading: "ぶつりがくのほうそくがしめすうちゅうのしんぴ" },
+            { display: "言語学習で広がる世界", reading: "げんごがくしゅうでひろがるせかい" },
+            { display: "哲学者の深い思索", reading: "てつがくしゃのふかいしさく" },
+            { display: "歴史の教訓を現代に生かす", reading: "れきしのきょうくんをげんだいにいかす" },
+            { display: "研究者の情熱と探究心", reading: "けんきゅうしゃのじょうねつとたんきゅうしん" },
+            { display: "図書館で知識を深める時間", reading: "としょかんでちしきをふかめるじかん" },
+
+            // 現代社会・都市生活
+            { display: "高層ビルが立ち並ぶ都心", reading: "こうそうびるがたちならぶとしん" },
+            { display: "満員電車の通勤ラッシュ", reading: "まんいんでんしゃのつうきんらっしゅ" },
+            { display: "カフェで仕事をするリモートワーク", reading: "かふぇでしごとをするりもーとわーく" },
+            { display: "インターネットで世界とつながる", reading: "いんたーねっとでせかいとつながる" },
+            { display: "スマートフォンの便利な機能", reading: "すまーとふぉんのべんりなきのう" },
+            { display: "オンラインショッピングの普及", reading: "おんらいんしょっぴんぐのふきゅう" },
+            { display: "都市の夜景が輝く美しさ", reading: "としのやけいがかがやくうつくしさ" },
+            { display: "コワーキングスペースでの新しい働き方", reading: "こわーきんぐすぺーすでのあたらしいはたらきかた" },
+
+            // 感情・心境
+            { display: "希望に満ちた新しい出発", reading: "きぼうにみちたあたらしいしゅっぱつ" },
+            { display: "挑戦することの大切さ", reading: "ちょうせんすることのたいせつさ" },
+            { display: "失敗から学ぶ貴重な経験", reading: "しっぱいからまなぶきちょうなけいけん" },
+            { display: "努力が実を結ぶ喜び", reading: "どりょくがみをむすぶよろこび" },
+            { display: "仲間と共に歩む人生", reading: "なかまとともにあゆむじんせい" },
+            { display: "困難を乗り越える強い意志", reading: "こんなんをのりこえるつよいいし" },
+            { display: "夢を追いかける情熱", reading: "ゆめをおいかけるじょうねつ" },
+            { display: "感謝の気持ちを忘れずに", reading: "かんしゃのきもちをわすれずに" },
+
+            // ファンタジー・創作
+            { display: "魔法使いが唱える不思議な呪文", reading: "まほうつかいがとなえるふしぎなじゅもん" },
+            { display: "ドラゴンが空を舞う幻想世界", reading: "どらごんがそらをまうげんそうせかい" },
+            { display: "勇者が悪を倒す冒険物語", reading: "ゆうしゃがあくをたおすぼうけんものがたり" },
+            { display: "妖精の住む秘密の森", reading: "ようせいのすむひみつのもり" },
+            { display: "時空を超えるタイムマシン", reading: "じくうをこえるたいむましん" },
+            { display: "宇宙船で銀河を旅する", reading: "うちゅうせんでぎんがをたびする" },
+            { display: "ロボットと人間の友情", reading: "ろぼっととにんげんのゆうじょう" },
+            { display: "古代遺跡に眠る謎の宝物", reading: "こだいいせきにねむるなぞのたからもの" }
+        ];
+
+        let currentTextData = null;
+        let currentText = '';
+        let currentReading = '';
+        let currentRomaji = '';
+        let currentRomajiOptions = [];
+        let currentIndex = 0;
+        let romajiIndex = 0;
+        let totalTypes = 0;
+        let mistakes = 0;
+        let startTime = null;
+        let recentKeystrokes = [];
+        let gameMode = 'endless';
+        let timeLimit = 0;
+        let timeLimitTimer = null;
+        let score = 0;
+        let isGameActive = false;
+
+        const modeLimits = {
+            'endless': 0,
+            'easy': 20,
+            'mid': 15,
+            'hard': 10,
+            'ex': 7
+        };
+
+        function setMode(mode) {
+            gameMode = mode;
+            timeLimit = modeLimits[mode];
+            
+            // ボタンの状態更新
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // 時間制限表示の切り替え
+            const timeLimitDisplay = document.getElementById('timeLimitDisplay');
+            if (timeLimit > 0) {
+                timeLimitDisplay.style.display = 'block';
+                timeLimitDisplay.textContent = `${timeLimit}s`;
+                timeLimitDisplay.classList.remove('warning');
+            } else {
+                timeLimitDisplay.style.display = 'none';
+            }
+            
+            resetStats();
+        }
+
+        function startTimeLimit() {
+            if (timeLimit <= 0) return;
+            
+            let remainingTime = timeLimit;
+            const timeLimitDisplay = document.getElementById('timeLimitDisplay');
+            
+            timeLimitTimer = setInterval(() => {
+                remainingTime--;
+                timeLimitDisplay.textContent = `${remainingTime}s`;
+                
+                if (remainingTime <= 3) {
+                    timeLimitDisplay.classList.add('warning');
+                }
+                
+                if (remainingTime <= 0) {
+                    gameOver();
+                }
+            }, 1000);
+        }
+
+        function gameOver() {
+            clearInterval(timeLimitTimer);
+            isGameActive = false;
+            document.getElementById('inputField').disabled = true;
+            
+            const accuracy = totalTypes > 0 ? ((totalTypes - mistakes) / totalTypes * 100).toFixed(1) : 0;
+            const finalScore = Math.max(0, totalTypes * 100 - mistakes * 50);
+            score = finalScore;
+            updateStats();
+            
+            alert(`ゲーム終了！\nスコア: ${finalScore}点\nタイプ数: ${totalTypes}\nミス数: ${mistakes}\n正確性: ${accuracy}%`);
+            
+            setTimeout(() => {
+                document.getElementById('inputField').disabled = false;
+                resetStats();
+            }, 1000);
+        }
+
+        function convertToRomajiOptions(hiraganaText) {
+            // まず拗音を正規化
+            let normalizedText = convertYouon(hiraganaText);
+            let options = [[]];
+            let i = 0;
+            
+            while (i < normalizedText.length) {
+                let char = normalizedText[i];
+                let foundPattern = false;
+                
+                // 3文字の拗音をチェック
+                if (i + 2 < normalizedText.length) {
+                    let threeChar = normalizedText.substring(i, i + 3);
+                    const youonMap = {
+                        'しゃ': ['sha', 'sya'], 'しゅ': ['shu', 'syu'], 'しょ': ['sho', 'syo'],
+                        'ちゃ': ['cha', 'tya'], 'ちゅ': ['chu', 'tyu'], 'ちょ': ['cho', 'tyo'],
+                        'じゃ': ['ja', 'jya', 'zya'], 'じゅ': ['ju', 'jyu', 'zyu'], 'じょ': ['jo', 'jyo', 'zyo'],
+                        'きゃ': ['kya'], 'きゅ': ['kyu'], 'きょ': ['kyo'],
+                        'ぎゃ': ['gya'], 'ぎゅ': ['gyu'], 'ぎょ': ['gyo'],
+                        'にゃ': ['nya'], 'にゅ': ['nyu'], 'にょ': ['nyo'],
+                        'ひゃ': ['hya'], 'ひゅ': ['hyu'], 'ひょ': ['hyo'],
+                        'びゃ': ['bya'], 'びゅ': ['byu'], 'びょ': ['byo'],
+                        'ぴゃ': ['pya'], 'ぴゅ': ['pyu'], 'ぴょ': ['pyo'],
+                        'みゃ': ['mya'], 'みゅ': ['myu'], 'みょ': ['myo'],
+                        'りゃ': ['rya'], 'りゅ': ['ryu'], 'りょ': ['ryo']
+                    };
+                    
+                    if (youonMap[threeChar]) {
+                        let patterns = youonMap[threeChar];
+                        let newOptions = [];
+                        for (let option of options) {
+                            for (let pattern of patterns) {
+                                newOptions.push([...option, pattern]);
+                            }
+                        }
+                        options = newOptions;
+                        i += 3;
+                        foundPattern = true;
+                    }
+                }
+                
+                // 促音の処理
+                if (!foundPattern && char === 'っ' && i + 1 < normalizedText.length) {
+                    let nextChar = normalizedText[i + 1];
+                    let nextPatterns = hiraganaToRomaji[nextChar] || [nextChar];
+                    let newOptions = [];
+                    for (let option of options) {
+                        for (let nextPattern of nextPatterns) {
+                            if (nextPattern.length > 0) {
+                                newOptions.push([...option, nextPattern[0]]);
+                            }
+                        }
+                    }
+                    options = newOptions;
+                    i++;
+                    foundPattern = true;
+                }
+                
+                // 1文字の処理
+                if (!foundPattern) {
+                    let patterns = hiraganaToRomaji[char] || [char];
+                    let newOptions = [];
+                    for (let option of options) {
+                        for (let pattern of patterns) {
+                            newOptions.push([...option, pattern]);
+                        }
+                    }
+                    options = newOptions;
+                    i++;
+                }
+            }
+            
+            return options.map(option => option.join(''));
+        }
+
+        function getRandomText() {
+            return textData[Math.floor(Math.random() * textData.length)];
+        }
+
+        function updateText() {
+            currentTextData = getRandomText();
+            currentText = currentTextData.display;
+            currentReading = currentTextData.reading;
+            currentRomajiOptions = convertToRomajiOptions(currentReading);
+            currentRomaji = currentRomajiOptions[0]; // デフォルトのローマ字パターン
+            currentIndex = 0;
+            romajiIndex = 0;
+            displayText();
+            document.getElementById('inputField').value = '';
+        }
+
+        function shuffleText() {
+            for (let i = textData.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [textData[i], textData[j]] = [textData[j], textData[i]];
+            }
+            updateText();
+        }
+
+        function displayText() {
+            // 漢字・ひらがな表示
+            const textDisplay = document.getElementById('textDisplay');
+            textDisplay.innerHTML = '';
+            
+            const visibleRange = 15;
+            const startVisible = Math.max(0, currentIndex - 5);
+            const endVisible = Math.min(currentText.length, startVisible + visibleRange);
+            
+            for (let i = startVisible; i < endVisible; i++) {
+                const char = document.createElement('span');
+                char.textContent = currentText[i];
+                char.className = 'char';
+                
+                if (i < currentIndex) {
+                    char.classList.add('correct');
+                } else if (i === currentIndex) {
+                    char.classList.add('current');
+                } else {
+                    char.classList.add('visible');
+                }
+                
+                textDisplay.appendChild(char);
+            }
+
+            // ローマ字表示
+            const romajiDisplay = document.getElementById('romajiDisplay');
+            romajiDisplay.innerHTML = '';
+            
+            const romajiVisibleRange = 30;
+            const romajiStartVisible = Math.max(0, romajiIndex - 10);
+            const romajiEndVisible = Math.min(currentRomaji.length, romajiStartVisible + romajiVisibleRange);
+            
+            for (let i = romajiStartVisible; i < romajiEndVisible; i++) {
+                const char = document.createElement('span');
+                char.textContent = currentRomaji[i];
+                char.className = 'romaji-char';
+                
+                if (i < romajiIndex) {
+                    char.classList.add('correct');
+                } else if (i === romajiIndex) {
+                    char.classList.add('current');
+                } else {
+                    char.classList.add('visible');
+                }
+                
+                romajiDisplay.appendChild(char);
+            }
+        }
+
+        function resetStats() {
+            totalTypes = 0;
+            mistakes = 0;
+            currentIndex = 0;
+            romajiIndex = 0;
+            startTime = null;
+            recentKeystrokes = [];
+            updateText();
+            updateStats();
+        }
+
+        function updateStats() {
+            document.getElementById('totalTypes').textContent = totalTypes;
+            document.getElementById('mistakes').textContent = mistakes;
+            document.getElementById('score').textContent = score;
+            
+            if (startTime) {
+                const elapsed = (Date.now() - startTime) / 1000;
+                document.getElementById('time').textContent = `${elapsed.toFixed(1)}s`;
+                
+                const now = Date.now();
+                recentKeystrokes = recentKeystrokes.filter(time => now - time <= 1000);
+                const kps = recentKeystrokes.length;
+                document.getElementById('kps').textContent = kps.toFixed(1);
+                
+                const kpm = elapsed > 0 ? Math.round((totalTypes / elapsed) * 60) : 0;
+                document.getElementById('kpm').textContent = kpm;
+                
+                // リアルタイムスコア計算
+                if (gameMode !== 'endless') {
+                    score = Math.max(0, totalTypes * 100 - mistakes * 50);
+                }
+            } else {
+                document.getElementById('time').textContent = '0s';
+                document.getElementById('kps').textContent = '0.0';
+                document.getElementById('kpm').textContent = '0';
+            }
+        }
+
+        document.getElementById('inputField').addEventListener('input', function(e) {
+            if (!startTime) {
+                startTime = Date.now();
+                isGameActive = true;
+                if (timeLimit > 0) {
+                    startTimeLimit();
+                }
+            }
+            
+            if (!isGameActive) return;
+            
+            const inputValue = e.target.value.toLowerCase();
+            
+            // 複数のローマ字パターンをチェック
+            let matchFound = false;
+            let bestMatch = { pattern: '', length: 0 };
+            
+            for (let romajiPattern of currentRomajiOptions) {
+                const remainingRomaji = romajiPattern.substring(romajiIndex);
+                
+                if (inputValue.length <= remainingRomaji.length) {
+                    const expectedSubstring = remainingRomaji.substring(0, inputValue.length);
+                    
+                    if (inputValue === expectedSubstring) {
+                        matchFound = true;
+                        if (romajiPattern.length > bestMatch.length) {
+                            bestMatch = { pattern: romajiPattern, length: romajiPattern.length };
+                        }
+                        
+                        // 完全一致または単文字入力の場合
+                        if (inputValue.length === 1 || romajiIndex + inputValue.length === romajiPattern.length) {
+                            currentRomaji = romajiPattern; // 使用中のパターンを更新
+                            romajiIndex += inputValue.length;
+                            totalTypes += inputValue.length;
+                            
+                            for (let i = 0; i < inputValue.length; i++) {
+                                recentKeystrokes.push(Date.now());
+                            }
+                            
+                            // 読みがなのインデックスも更新
+                            updateReadingIndex();
+                            
+                            // 入力フィールドをクリア
+                            e.target.value = '';
+                            
+                            // 文章の最後に到達したかチェック
+                            if (romajiIndex >= currentRomaji.length) {
+                                if (gameMode === 'endless') {
+                                    setTimeout(() => updateText(), 300);
+                                } else {
+                                    // 時間制限モードでは時間をリセット
+                                    clearInterval(timeLimitTimer);
+                                    setTimeout(() => {
+                                        updateText();
+                                        if (isGameActive) {
+                                            startTimeLimit();
+                                        }
+                                    }, 300);
+                                }
+                            } else {
+                                displayText();
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (!matchFound && inputValue.length > 0) {
+                // 間違いの場合
+                mistakes++;
+                
+                const inputField = document.getElementById('inputField');
+                inputField.style.borderColor = '#f44336';
+                inputField.style.boxShadow = '0 0 20px rgba(244, 67, 54, 0.3)';
+                
+                e.target.value = '';
+                
+                setTimeout(() => {
+                    inputField.style.borderColor = 'rgba(100, 181, 246, 0.8)';
+                    inputField.style.boxShadow = '0 0 20px rgba(100, 181, 246, 0.3)';
+                }, 200);
+            }
+            
+            updateStats();
+        });
+
+        function updateReadingIndex() {
+            // ローマ字の進行に応じて読みがなのインデックスを更新
+            let romajiCount = 0;
+            for (let i = 0; i < currentReading.length; i++) {
+                const readingChar = currentReading[i];
+                const romajiOptions = hiraganaToRomaji[readingChar] || [readingChar];
+                const romajiForChar = romajiOptions[0]; // デフォルトパターンを使用
+                romajiCount += romajiForChar.length;
+                
+                if (romajiCount > romajiIndex) {
+                    currentIndex = Math.floor(i * currentText.length / currentReading.length);
+                    break;
+                } else if (romajiCount === romajiIndex) {
+                    currentIndex = Math.floor((i + 1) * currentText.length / currentReading.length);
+                    break;
+                }
+            }
+        }
+
+        // 統計の定期更新
+        setInterval(updateStats, 100);
+
+        // 初期化
+        updateText();
+        
+        // フォーカスを入力フィールドに設定
+        document.getElementById('inputField').focus();
+    </script>
+</body>
+</html>
